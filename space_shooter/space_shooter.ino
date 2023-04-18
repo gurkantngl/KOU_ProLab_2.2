@@ -5,36 +5,47 @@
 
 #define SSD1306_WIDTH 128
 #define SSD1306_LCDHEIGHT 64
-#define OLED_RESET 13
+#define OLED_RESET 8
 Adafruit_SSD1306 display(SSD1306_WIDTH, SSD1306_LCDHEIGHT, &Wire, OLED_RESET);
 
-const uint8_t MAX_METEORITES = 3;
-const uint8_t MAX_SpaceJunk = 3;
-const uint8_t MAX_BULLETS = 10;
-const uint8_t MAX_PRIZE = 1;
+const uint8_t MAX_METEORITES = 5;
+const uint8_t MAX_SpaceJunk = 5;
+const uint8_t MAX_BULLETS = 5;
+const uint8_t MAX_PRIZE = 5;
+const uint8_t MAX_IMMUNITY = 5;
 
+// Meteor
 struct Meteorites {
   int8_t x, y, vx, visible, count=0;
 };
 
+// Uzay Çöpü
 struct SpaceJunk {
   int8_t x, y, vx, visible;
 };
 
+// Silah
 struct Bullet {
   int8_t x, y;
   bool fired = false;
 };
 
+// ödül Puanı
 struct Prize {
   int8_t x, y, vx, visible;
 };
+
+// dokunulmazlık
+struct Immunity{
+  int8_t x, y, vx, visible;
+};
+
 
 SpaceJunk spacejunk[MAX_SpaceJunk];
 Meteorites meteo[MAX_METEORITES];
 Bullet fire[MAX_BULLETS];
 Prize prize[MAX_PRIZE];
-
+Immunity immunity[MAX_IMMUNITY];
 
 
 // Global variables
@@ -42,9 +53,10 @@ uint8_t color = WHITE;
 int bullet_button = 2;
 int buttonState = 0;
 int ship_margin = 10;
-int amor = 100;
+int amor = 3;
+int shot = 3;
 int score = 0;
-int delayTime = 300;
+int delayTime = 100;
 int LED = 12;
 
 // ----------------------------------------------------------
@@ -93,8 +105,13 @@ int shipPosition(){
 bool fire_bullet() {
   buttonState = digitalRead(bullet_button);
   if (buttonState == 1) {
-    digitalWrite(LED, HIGH);
-    return true;
+    if (shot > 0){
+      shot --;
+      Serial.print("Ates");
+      Serial.println(shot);
+      digitalWrite(LED, HIGH);
+      return true;
+    }
   }
   else if (buttonState == 0){
     digitalWrite(LED, LOW);
@@ -109,11 +126,10 @@ void bullet(bool fire) {
 }
 
 void collition_check(int shipPos) {
-  // METERIORIT COLLITION
+  // METEOR ÇARPMASI
   for (uint8_t i = 0; i < MAX_METEORITES; i++) { 
-    if( meteo[i].x < ship_margin + 6 &&  meteo[i].x >= ship_margin ) {
+    if( meteo[i].x < ship_margin + 8 &&  meteo[i].x >= ship_margin ) {
       // in range of x-axses 
-      
       if( meteo[i].y < shipPos + 8 &&  meteo[i].y >= shipPos ) {
         // in range of y-axses
         if(amor > 0 ){
@@ -125,9 +141,42 @@ void collition_check(int shipPos) {
       }
     }
   }
+  
+  // UZAY ÇÖPÜ ÇARPMASI
+  for (uint8_t i = 0; i < MAX_SpaceJunk; i++) { 
+    if( spacejunk[i].x < ship_margin + 8 &&  spacejunk[i].x >= ship_margin ) {
+      // in range of x-axses 
+      if( spacejunk[i].y < shipPos + 8 &&  spacejunk[i].y >= shipPos ) {
+        // in range of y-axses
+        if(amor > 0 ){
+          amor --;          
+        }else {
+          amor = 0;
+        }
+        spacejunk[i].visible = false;
+      }
+    }
+  }
+
+
+  // Ödül Puanı Alma
+  for (uint8_t i = 0; i < MAX_PRIZE; i++) { 
+    if( prize[i].x < ship_margin + 8 &&  prize[i].x >= ship_margin ) {
+      // in range of x-axses 
+      if( prize[i].y < shipPos + 8 &&  prize[i].y >= shipPos ) {
+        // in range of y-axses
+        if(amor < 3){
+          prize[i].visible = false;
+          amor ++;        
+        }
+      }
+    }
+  }
+
+
 
   
-  // BULLET COLLITION
+  // UZAY ÇÖPÜ ATEŞ
   for (uint8_t i_bu = 0; i_bu < MAX_BULLETS; i_bu++) {
     for (uint8_t i_me = 0; i_me < MAX_SpaceJunk; i_me++) { 
       if (fire[i_bu].x >= spacejunk[i_me].x && fire[i_bu].x < spacejunk[i_me].x + 8 && fire[i_bu].fired == true) {
@@ -139,20 +188,35 @@ void collition_check(int shipPos) {
     }
   }
 
-    for (uint8_t i_bu = 0; i_bu < MAX_BULLETS; i_bu++) {
-      for (uint8_t i_me = 0; i_me < MAX_METEORITES; i_me++) { 
-        if (fire[i_bu].x >= meteo[i_me].x && fire[i_bu].x < meteo[i_me].x + 12 && fire[i_bu].fired == true) {
-          if (fire[i_bu].y >= meteo[i_me].y && fire[i_bu].y < meteo[i_me].y + 12 ) {
-            fire[i_bu].fired = false;
-            meteo[i_me].count++;
-            Serial.println(meteo[i_me].count);
-            if(meteo[i_me].count >= 2){
-              meteo[i_me].visible = false;
-            }
+  // METEOR ATEŞ
+  for (uint8_t i_bu = 0; i_bu < MAX_BULLETS; i_bu++) {
+    for (uint8_t i_me = 0; i_me < MAX_METEORITES; i_me++) { 
+      if (fire[i_bu].x >= meteo[i_me].x && fire[i_bu].x < meteo[i_me].x + 12 && fire[i_bu].fired == true) {
+        if (fire[i_bu].y >= meteo[i_me].y && fire[i_bu].y < meteo[i_me].y + 12 ) {
+          fire[i_bu].fired = false;
+          meteo[i_me].count++;
+          Serial.println(meteo[i_me].count);
+          if(meteo[i_me].count >= 2){
+            meteo[i_me].visible = false;
           }
         }
       }
+    }
   }
+
+    // Dokunulmazlık Alma
+  for (uint8_t i_bu = 0; i_bu < MAX_BULLETS; i_bu++) {
+    for (uint8_t i_me = 0; i_me < MAX_IMMUNITY; i_me++) { 
+      if (fire[i_bu].x >= immunity[i_me].x && fire[i_bu].x < immunity[i_me].x + 8 && fire[i_bu].fired == true) {
+        if (fire[i_bu].y >= immunity[i_me].y && fire[i_bu].y < immunity[i_me].y + 8 ) {
+          immunity[i_me].visible = false;
+          fire[i_bu].fired = false;
+        }
+      }
+    }
+  }
+
+
 }
 
 
@@ -334,14 +398,14 @@ void draw_prize(){
       0x78, // .####...
       0x30, // ..##....
     };
-    if(meteo[i].visible == true ){
+    if(prize[i].visible == true ){
       display.drawBitmap(prize[i].x, prize[i].y, armor_img, 8, 8, color);
     }
   }
 
 }
 void move_prize() {
-  for (uint8_t i = 0; i < MAX_SpaceJunk; i++) {
+  for (uint8_t i = 0; i < MAX_PRIZE; i++) {
     prize[i].x -= 8;
     if (prize[i].x < 0) {
       prize[i].x = display.width();
@@ -350,6 +414,45 @@ void move_prize() {
     }
   }
 }
+
+
+
+
+//
+// DOKUNULMAZLIK
+//
+
+void init_immunity() {
+  for (uint8_t i = 0; i < MAX_IMMUNITY; i++) {
+    immunity[i].x = 120;
+    immunity[i].y = random(display.height()-8);
+    immunity[i].visible = true;
+  }
+}
+
+
+
+void draw_immunity() {
+  for (uint8_t i = 0; i < MAX_IMMUNITY; i++) {
+    if(immunity[i].visible == true ){
+      display.drawTriangle(immunity[i].x, immunity[i].y, immunity[i].x+8, immunity[i].y, immunity[i].x, immunity[i].y+8, color);
+    }
+    }
+}
+
+
+
+void move_immunity() {
+  for (uint8_t i = 0; i < MAX_IMMUNITY; i++) {
+    immunity[i].x -= 8;
+    if (immunity[i].x < 0) {
+      immunity[i].x = display.width();
+      immunity[i].y = random(display.height());
+      immunity[i].visible = true;
+    }
+  }
+}
+
 
 
 
@@ -419,6 +522,10 @@ void loop() {
 
   // skor
   display_score();
+
+  if (amor == 0){
+    lose();
+  }  
   
   display.display();
   delay(delayTime);
@@ -428,6 +535,16 @@ void loop() {
 }
 
 
+void lose(){
+  display.clearDisplay();
+  display.setTextSize(2);
+  display.setTextColor(color);
+  display.setRotation(1);
+  display.setCursor(4, 64);
+  display.println("LOSE!");  
+  display.display();
+  for(;;);
+}
 
 
 
