@@ -15,7 +15,7 @@ Adafruit_SSD1306 display(SSD1306_WIDTH, SSD1306_LCDHEIGHT, &Wire, OLED_RESET);
 const uint8_t MAX_METEORITES = 1;
 const uint8_t MAX_SpaceJunk = 1;
 const uint8_t MAX_BULLETS = 3;
-const uint8_t MAX_PRIZE = 1;
+const uint8_t MAX_PRIZE = 2;
 const uint8_t MAX_IMMUNITY = 1;
 
 byte digit[10]= {0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x7, 0x7F, 0x6F};
@@ -63,12 +63,16 @@ int ship_margin = 10;
 int amor = 3;
 int shot = 3;
 int score = 0;
-int delayTime = 100;
+int delayTime = 500;
 int time = 0;
 int count1 = 0;
 int count2 = 0;
 int counterS = 0;
-
+int seviye = 0;
+int s1 = 0;
+int s2 = 0;
+int b1 = 0;
+int b2 = 0;
 // ----------------------------------------------------------
 // Init Functions
 // ----------------------------------------------------------
@@ -505,13 +509,15 @@ void setup() {
   pinMode(CLK, OUTPUT);
   pinMode(DATA, OUTPUT);
   pinMode(6, OUTPUT);
-  pinMode(A1, INPUT);
+  //pinMode(A1, INPUT);
   pinMode(8, OUTPUT);
   pinMode(9, OUTPUT);
   pinMode(10, OUTPUT);
   pinMode(0, OUTPUT);
   pinMode(3, OUTPUT);
   pinMode(2, OUTPUT);
+  pinMode(4, INPUT);
+  pinMode(A2, INPUT);
   init_display();
   init_pot();
   
@@ -530,6 +536,37 @@ void setup() {
 // LOOP 
 // ----------------------------------------------------------
 void loop() {
+
+  while(seviye == 0){
+      display.clearDisplay();
+      display.fillRect(0, 0, 128, 64, color2);
+      display.setTextSize(1);
+      display.setTextColor(color);
+      display.setRotation(1);
+      display.setCursor(20, 64);
+      display.println("Seviye");
+      display.setCursor(20, 74);
+      display.println("Secin");
+      display.display();
+
+
+      b1 = digitalRead(5);
+      if (b1 == 1){
+        seviye = 1; 
+        display.clearDisplay();
+        display.setRotation(0);
+      }
+      b2 = digitalRead(4);
+      if (b2 == 1){
+        seviye = 2;
+        display.clearDisplay();
+        display.setRotation(0);
+      } 
+  }
+
+
+
+
 
 
   // yıldızları çiz
@@ -638,15 +675,18 @@ void loop() {
 
   display.display();
   delay(delayTime);
+  if(seviye == 2 && (millis()+count2*delayTime)%10000<= 1000){
+    delayTime *= 0.8;
+  }
   count1++;
   count2++;
   score ++;
-  if(score%15 == 0){
+  if(score%45 == 0){
     if(shot<3){
       shot++;
     }
   }
-  if(score%25 == 0){
+  if(score%30 == 0){
     if(shot<3){
       shot++;
     }
